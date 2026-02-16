@@ -1,0 +1,44 @@
+# 바이너리
+backend/tpops-server
+backend/tpops-backend
+
+scorap0.m
+scorap1.m
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# 로그
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python (레거시)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+env/
+
+# 환경 변수
+.env
+.env.local

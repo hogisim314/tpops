@@ -1,0 +1,27 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: tpops
+build:
+  artifacts:
+    - image: tpops-backend
+      docker:
+        dockerfile: Dockerfile.backend
+    - image: tpops-frontend
+      docker:
+        dockerfile: Dockerfile.frontend
+  local:
+    push: false
+manifests:
+  rawYaml:
+    - k8s/namespace.yaml
+    - k8s/secret.yaml
+    - k8s/configmap.yaml
+    - k8s/backend-deployment.yaml
+    - k8s/backend-service.yaml
+    - k8s/frontend-deployment.yaml
+    - k8s/frontend-service.yaml
+    - k8s/ingress.yaml
+deploy:
+  kubectl:
+    defaultNamespace: tpops

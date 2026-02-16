@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tmax 모니터링 대시보드</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin-bottom: 30px;
+      }
+
+      .header h1 {
+        color: #333;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .header .subtitle {
+        color: #666;
+        font-size: 1.1em;
+      }
+
+      .header .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #4caf50;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      }
+
+      .stat-card .label {
+        color: #888;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+      }
+
+      .stat-card .value {
+        color: #333;
+        font-size: 2.5em;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      .stat-card .icon {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      @media (max-width: 1024px) {
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .panel {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .panel h2 {
+        color: #333;
+        font-size: 1.5em;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #667eea;
+      }
+
+      .node-list,
+      .svg-list {
+        list-style: none;
+      }
+
+      .node-item,
+      .svg-item {
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .node-item:hover,
+      .svg-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+      }
+
+      .node-item .node-name,
+      .svg-item .svg-name {
+        font-weight: bold;
+        font-size: 1.1em;
+        color: #333;
+        margin-bottom: 5px;
+      }
+
+      .node-item .node-info,
+      .svg-item .svg-info {
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+        margin-left: 10px;
+      }
+
+      .status-active {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-inactive {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .refresh-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-size: 1em;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 20px auto;
+      }
+
+      .refresh-btn:hover {
+        background: #764ba2;
+        transform: scale(1.05);
+      }
+
+      .refresh-btn:active {
+        transform: scale(0.95);
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .detail-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        overflow-y: auto;
+      }
+
+      .modal-content {
+        background: white;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 30px;
+        border-radius: 15px;
+        position: relative;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        font-size: 2em;
+        color: #999;
+        cursor: pointer;
+        transition: color 0.3s;
+      }
+
+      .close-btn:hover {
+        color: #333;
+      }
+
+      .detail-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .detail-table th,
+      .detail-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .detail-table th {
+        background: #667eea;
+        color: white;
+        font-weight: bold;
+      }
+
+      .detail-table tr:hover {
+        background: #f8f9fa;
+      }
+
+      .timestamp {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.8);
+        margin-top: 20px;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>
+          🖥️ Tmax 모니터링 대시보드
+          <span class="status-indicator"></span>
+        </h1>
+        <p class="subtitle">실시간 Tmax 시스템 상태 모니터링</p>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="icon">🌐</div>
+          <div class="label">도메인 ID</div>
+          <div class="value" id="domainId">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🖥️</div>
+          <div class="label">노드 수</div>
+          <div class="value" id="totalNodes">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">📦</div>
+          <div class="label">서버 그룹</div>
+          <div class="value" id="totalSvgs">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">⚙️</div>
+          <div class="label">서버 수</div>
+          <div class="value" id="totalServers">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🔧</div>
+          <div class="label">서비스 수</div>
+          <div class="value" id="totalServices">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🔌</div>
+          <div class="label">게이트웨이</div>
+          <div class="value" id="totalGateways">-</div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="panel">
+          <h2>📍 노드 목록</h2>
+          <div id="nodesList" class="loading">
+            <div class="spinner"></div>
+            <p>데이터를 불러오는 중...</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>📦 서버 그룹 목록</h2>
+          <div id="svgsList" class="loading">
+            <div class="spinner"></div>
+            <p>데이터를 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="refresh-btn" onclick="loadData()">🔄 새로고침</button>
+
+      <div class="timestamp" id="timestamp"></div>
+    </div>
+
+    <div class="detail-modal" id="detailModal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <div id="modalContent"></div>
+      </div>
+    </div>
+
+    <script>
+      let configData = null;
+
+      async function loadData() {
+        try {
+          const response = await fetch("/api/config");
+          if (!response.ok) {
+            throw new Error("데이터를 불러올 수 없습니다");
+          }
+
+          configData = await response.json();
+          updateDashboard(configData);
+          updateTimestamp();
+        } catch (error) {
+          console.error("Error loading data:", error);
+          showError("데이터를 불러오는 중 오류가 발생했습니다.");
+        }
+      }
+
+      function updateDashboard(data) {
+        const summary = data.summary;
+
+        // 통계 업데이트
+        document.getElementById("domainId").textContent =
+          summary.domain_id || "-";
+        document.getElementById("totalNodes").textContent =
+          summary.total_nodes || "0";
+        document.getElementById("totalSvgs").textContent =
+          summary.total_server_groups || "0";
+        document.getElementById("totalServers").textContent =
+          summary.total_servers || "0";
+        document.getElementById("totalServices").textContent =
+          summary.total_services || "0";
+        document.getElementById("totalGateways").textContent =
+          summary.total_gateways || "0";
+
+        // 노드 목록 업데이트
+        renderNodesList(summary.nodes || []);
+
+        // 서버 그룹 목록 업데이트
+        renderSvgsList(summary.server_groups || []);
+      }
+
+      function renderNodesList(nodes) {
+        const container = document.getElementById("nodesList");
+
+        if (nodes.length === 0) {
+          container.innerHTML = "<p>노드가 없습니다.</p>";
+          return;
+        }
+
+        const html = `
+                <ul class="node-list">
+                    ${nodes
+                      .map(
+                        (node) => `
+                        <li class="node-item" onclick="showNodeDetail('${node}')">
+                            <div class="node-name">
+                                ${node}
+                                <span class="status-badge status-active">활성</span>
+                            </div>
+                            <div class="node-info">클릭하여 상세 정보 보기</div>
+                        </li>
+                    `,
+                      )
+                      .join("")}
+                </ul>
+            `;
+
+        container.innerHTML = html;
+      }
+
+      function renderSvgsList(svgs) {
+        const container = document.getElementById("svgsList");
+
+        if (svgs.length === 0) {
+          container.innerHTML = "<p>서버 그룹이 없습니다.</p>";
+          return;
+        }
+
+        const html = `
+                <ul class="svg-list">
+                    ${svgs
+                      .map(
+                        (svg) => `
+                        <li class="svg-item" onclick="showSvgDetail('${svg}')">
+                            <div class="svg-name">
+                                ${svg}
+                                <span class="status-badge status-active">실행 중</span>
+                            </div>
+                            <div class="svg-info">클릭하여 상세 정보 보기</div>
+                        </li>
+                    `,
+                      )
+                      .join("")}
+                </ul>
+            `;
+
+        container.innerHTML = html;
+      }
+
+      async function showNodeDetail(nodeName) {
+        try {
+          const response = await fetch(`/api/node/${nodeName}`);
+          if (!response.ok) {
+            throw new Error("노드 정보를 불러올 수 없습니다");
+          }
+
+          const nodeInfo = await response.json();
+
+          const html = `
+                    <h2>🖥️ 노드 상세 정보: ${nodeName}</h2>
+                    <table class="detail-table">
+                        <tr>
+                            <th>속성</th>
+                            <th>값</th>
+                        </tr>
+                        <tr>
+                            <td>호스트명</td>
+                            <td>${nodeInfo.hostname || "N/A"}</td>
+                        </tr>
+                        <tr>
+                            <td>포트</td>
+                            <td>${nodeInfo.port || "N/A"}</td>
+                        </tr>
+                        <tr>
+                            <td>최대 서버</td>
+                            <td>${nodeInfo.max_servers || "N/A"}</td>
+                        </tr>
+                        <tr>
+                            <td>최대 사용자</td>
+                            <td>${nodeInfo.max_users || "N/A"}</td>
+                        </tr>
+                        <tr>
+                            <td>Tmax Home</td>
+                            <td>${nodeInfo.tmax_home || "N/A"}</td>
+                        </tr>
+                        <tr>
+                            <td>서버 그룹 수</td>
+                            <td>${nodeInfo.server_groups ? nodeInfo.server_groups.length : 0}</td>
+                        </tr>
+                    </table>
+                    ${
+                      nodeInfo.server_groups &&
+                      nodeInfo.server_groups.length > 0
+                        ? `
+                        <h3 style="margin-top: 20px;">서버 그룹 목록</h3>
+                        <ul style="list-style: none; padding: 10px;">
+                            ${nodeInfo.server_groups
+                              .map(
+                                (svg) => `
+                                <li style="padding: 8px; margin: 5px 0; background: #f8f9fa; border-radius: 5px;">
+                                    📦 ${svg}
+                                </li>
+                            `,
+                              )
+                              .join("")}
+                        </ul>
+                    `
+                        : ""
+                    }
+                `;
+
+          document.getElementById("modalContent").innerHTML = html;
+          document.getElementById("detailModal").style.display = "block";
+        } catch (error) {
+          console.error("Error loading node detail:", error);
+          alert("노드 상세 정보를 불러올 수 없습니다.");
+        }
+      }
+
+      async function showSvgDetail(svgName) {
+        try {
+          const response = await fetch(`/api/svrgroup/${svgName}`);
+          if (!response.ok) {
+            throw new Error("서버 그룹 정보를 불러올 수 없습니다");
+          }
+
+          const svgInfo = await response.json();
+
+          const html = `
+                    <h2>📦 서버 그룹 상세 정보: ${svgName}</h2>
+                    <table class="detail-table">
+                        <tr>
+                            <th>속성</th>
+                            <th>값</th>
+                        </tr>
+                        <tr>
+                            <td>노드</td>
+                            <td>${svgInfo.node || "N/A"}</td>
+                        </tr>
+                        <tr>
+                            <td>백업</td>
+                            <td>${svgInfo.backup || "None"}</td>
+                        </tr>
+                        <tr>
+                            <td>Cousin</td>
+                            <td>${svgInfo.cousin || "None"}</td>
+                        </tr>
+                        <tr>
+                            <td>재시작</td>
+                            <td>${svgInfo.restart || "N/A"}</td>
+                        </tr>
+                        <tr>
+                            <td>자동 백업</td>
+                            <td>${svgInfo.autobackup || "N/A"}</td>
+                        </tr>
+                    </table>
+                    ${
+                      svgInfo.servers && svgInfo.servers.length > 0
+                        ? `
+                        <h3 style="margin-top: 20px;">서버 목록</h3>
+                        <table class="detail-table">
+                            <thead>
+                                <tr>
+                                    <th>서버명</th>
+                                    <th>최소</th>
+                                    <th>최대</th>
+                                    <th>재시작</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${svgInfo.servers
+                                  .map(
+                                    (srv) => `
+                                    <tr>
+                                        <td>${srv.name}</td>
+                                        <td>${srv.min}</td>
+                                        <td>${srv.max}</td>
+                                        <td>${srv.restart}</td>
+                                    </tr>
+                                `,
+                                  )
+                                  .join("")}
+                            </tbody>
+                        </table>
+                    `
+                        : '<p style="margin-top: 20px;">서버가 없습니다.</p>'
+                    }
+                `;
+
+          document.getElementById("modalContent").innerHTML = html;
+          document.getElementById("detailModal").style.display = "block";
+        } catch (error) {
+          console.error("Error loading server group detail:", error);
+          alert("서버 그룹 상세 정보를 불러올 수 없습니다.");
+        }
+      }
+
+      function closeModal() {
+        document.getElementById("detailModal").style.display = "none";
+      }
+
+      function updateTimestamp() {
+        const now = new Date();
+        const timeString = now.toLocaleString("ko-KR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        document.getElementById("timestamp").textContent =
+          `마지막 업데이트: ${timeString}`;
+      }
+
+      function showError(message) {
+        alert(message);
+      }
+
+      // 모달 외부 클릭시 닫기
+      window.onclick = function (event) {
+        const modal = document.getElementById("detailModal");
+        if (event.target === modal) {
+          closeModal();
+        }
+      };
+
+      // 페이지 로드시 데이터 불러오기
+      document.addEventListener("DOMContentLoaded", () => {
+        loadData();
+        // 30초마다 자동 새로고침
+        setInterval(loadData, 30000);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tpops-config
+  namespace: tpops
+data:
+  # 로컬 PostgreSQL 사용 (Mac Docker Desktop의 경우 host.docker.internal)
+  DATABASE_URL: "postgresql://giho@host.docker.internal:5432/tpops"
+  # 회사 Elasticsearch 서버 주소로 변경 필요
+  ELASTICSEARCH_HOST: "http://your-company-elasticsearch:9200"
